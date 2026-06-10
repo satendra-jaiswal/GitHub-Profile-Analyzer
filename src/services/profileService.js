@@ -157,12 +157,18 @@ const analyzeAndStore = async (username) => {
  * Get all analyzed profiles with latest stats
  */
 const getAllProfiles = async ({ page = 1, limit = 20, sort = "analyzed_at", order = "DESC" } = {}) => {
-  const allowedSort = ["analyzed_at", "username", "followers", "total_stars", "activity_score"];
-  const safeSort = allowedSort.includes(sort) ? sort : "analyzed_at";
+  const sortMap = {
+    analyzed_at: "p.analyzed_at",
+    username: "p.username",
+    followers: "ps.followers",
+    total_stars: "ps.total_stars",
+    activity_score: "pa.activity_score",
+  };
+  const safeSort = sortMap[sort] || "p.analyzed_at";
   const safeOrder = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
   const offset = (page - 1) * limit;
 
-  const [rows] = await pool.execute(
+  const [rows] = await pool.query(
     `SELECT
        p.id, p.username, p.name, p.avatar_url, p.html_url, p.location, p.bio,
        p.account_type, p.analyzed_at, p.updated_at,

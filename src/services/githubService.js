@@ -26,6 +26,11 @@ const fetchUserProfile = async (username) => {
       e.statusCode = 404;
       throw e;
     }
+    if (err.response?.status === 401) {
+      const e = new Error("GitHub API token is invalid or expired. Please check your GITHUB_TOKEN in .env.");
+      e.statusCode = 401;
+      throw e;
+    }
     if (err.response?.status === 403) {
       const e = new Error("GitHub API rate limit exceeded. Set GITHUB_TOKEN in .env to increase limits.");
       e.statusCode = 429;
