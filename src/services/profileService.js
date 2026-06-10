@@ -169,13 +169,12 @@ const getAllProfiles = async ({ page = 1, limit = 20, sort = "analyzed_at", orde
        ps.public_repos, ps.followers, ps.following, ps.total_stars, ps.total_forks,
        pa.activity_score, pa.most_used_language, pa.account_age_days
      FROM profiles p
-     LEFT JOIN (
-       SELECT profile_id, public_repos, followers, following, total_stars, total_forks,
-              MAX(recorded_at) AS latest
-       FROM profile_stats
-       GROUP BY profile_id
-     ) latest_ps ON latest_ps.profile_id = p.id
-     LEFT JOIN profile_stats ps ON ps.profile_id = p.id AND ps.recorded_at = latest_ps.latest
+     LEFT JOIN profile_stats ps ON ps.id = (
+       SELECT id FROM profile_stats
+       WHERE profile_id = p.id
+       ORDER BY recorded_at DESC
+       LIMIT 1
+     )
      LEFT JOIN profile_activity pa ON pa.profile_id = p.id
      ORDER BY ${safeSort} ${safeOrder}
      LIMIT ? OFFSET ?`,
