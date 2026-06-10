@@ -10,10 +10,21 @@ const {
  * Full pipeline: fetch → analyze → upsert into DB
  */
 const analyzeAndStore = async (username) => {
-  // 1. Fetch from GitHub
-  const ghProfile = await fetchUserProfile(username);
-  const repos = await fetchUserRepos(username);
-  const repoStats = analyzeRepos(repos);
+  let ghProfile, repos, repoStats;
+  try {
+    // 1. Fetch from GitHub
+    ghProfile = await fetchUserProfile(username);
+    repos = await fetchUserRepos(username);
+    repoStats = analyzeRepos(repos);
+  } catch (err) {
+    // Fallback cache check: if we already have the profile analyzed in our DB, return it
+    const existing = await getProfileByUsername(username);
+    if (existing) {
+      console.warn(`[Fallback Cache] GitHub API failed: ${err.message}. Returning database copy for: ${username}`);
+      return existing;
+    }
+    throw err;
+  }
 
   const accountAgeDays = Math.floor(
     (Date.now() - new Date(ghProfile.created_at).getTime()) / (1000 * 60 * 60 * 24)

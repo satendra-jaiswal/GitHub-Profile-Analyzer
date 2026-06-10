@@ -41,23 +41,27 @@ const fetchUserProfile = async (username) => {
 };
 
 /**
- * Fetch all public repositories for a user (auto-paginate up to 500)
+ * Fetch public repositories for a user (up to 100 to optimize API rate limit usage)
  */
 const fetchUserRepos = async (username) => {
-  const repos = [];
-  let page = 1;
-  const perPage = 100;
-
-  while (repos.length < 500) {
+  try {
     const { data } = await githubApi.get(`/users/${username}/repos`, {
-      params: { per_page: perPage, page, sort: "pushed", type: "owner" },
+      params: { per_page: 100, page: 1, sort: "pushed", type: "owner" },
     });
-    repos.push(...data);
-    if (data.length < perPage) break;
-    page++;
+    return data;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      const e = new Error("GitHub API token is invalid or expired. Please check your GITHUB_TOKEN in .env.");
+      e.statusCode = 401;
+      throw e;
+    }
+    if (err.response?.status === 403) {
+      const e = new Error("GitHub API rate limit exceeded. Set GITHUB_TOKEN in .env to increase limits.");
+      e.statusCode = 429;
+      throw e;
+    }
+    throw new Error(`GitHub API error: ${err.message}`);
   }
-
-  return repos;
 };
 
 /**

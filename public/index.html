@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Profile Analyzer Dashboard</title>
+  <!-- Google Fonts: Outfit for titles, Inter for UI text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header animate-fade-in">
+      <div class="header-logo">
+        <i class="fa-brands fa-github text-gradient"></i>
+        <h1>GitHub <span class="text-gradient">Analyzer</span></h1>
+      </div>
+      <p class="header-tagline">Analyze public profile metrics, repositories, and developer activity scores</p>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="dashboard-grid">
+      <!-- Left column: Controls and History -->
+      <section class="sidebar-pane animate-slide-in">
+        <!-- Search Card -->
+        <div class="glass-card search-card">
+          <h2><i class="fa-solid fa-magnifying-glass"></i> Analyze Profile</h2>
+          <form id="search-form" class="search-form">
+            <div class="input-wrapper">
+              <i class="fa-solid fa-user input-icon"></i>
+              <input type="text" id="username-input" placeholder="Enter GitHub username..." required autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary" id="search-btn">
+              <span>Analyze</span> <i class="fa-solid fa-bolt"></i>
+            </button>
+          </form>
+          <div id="api-status-msg" class="info-alert hidden"></div>
+        </div>
+
+        <!-- History Card -->
+        <div class="glass-card history-card">
+          <h2><i class="fa-solid fa-history"></i> Recent Analyses</h2>
+          <div class="sort-controls">
+            <label for="sort-select">Sort by:</label>
+            <select id="sort-select">
+              <option value="analyzed_at">Analyzed Date</option>
+              <option value="followers">Followers</option>
+              <option value="total_stars">Stars</option>
+              <option value="activity_score">Activity Score</option>
+            </select>
+          </div>
+          <div id="history-list" class="history-list">
+            <!-- Dynamically populated -->
+            <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: Detailed View -->
+      <section class="detail-pane animate-slide-in">
+        <!-- Welcome Screen (default state) -->
+        <div id="welcome-view" class="glass-card welcome-card">
+          <i class="fa-brands fa-github-alt welcome-icon"></i>
+          <h2>GitHub Profile Insights</h2>
+          <p>Search for any public GitHub developer profile to extract metrics, aggregate repository statistics, check
+            language breakdowns, and compute activity scores in real-time.</p>
+          <div class="welcome-suggestions">
+            <span>Try searching:</span>
+            <button class="suggestion-tag">torvalds</button>
+            <button class="suggestion-tag">sindresorhus</button>
+            <button class="suggestion-tag">gaearon</button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-view" class="glass-card loading-card hidden">
+          <div class="spinner-ring">
+            <div class="ring-dot"></div>
+          </div>
+          <h3>Analyzing GitHub Account...</h3>
+          <p>Fetching public profile details, listing repositories, calculating total stars and language breakdowns...
+          </p>
+        </div>
+
+        <!-- Analysis Display -->
+        <div id="analysis-view" class="hidden">
+          <!-- Profile Main Card -->
+          <div class="glass-card profile-main-card">
+            <div class="profile-header">
+              <img id="profile-avatar" src="" alt="Avatar">
+              <div class="profile-title-area">
+                <div class="profile-name-row">
+                  <h2 id="profile-name">Developer Name</h2>
+                  <span id="profile-type" class="badge">User</span>
+                  <span id="profile-hireable" class="badge hire-badge hidden">Hireable</span>
+                </div>
+                <p id="profile-username" class="profile-handle">@username</p>
+                <p id="profile-bio" class="profile-bio">Bio description</p>
+              </div>
+            </div>
+
+            <div class="profile-metadata-grid">
+              <div class="meta-item" id="meta-location-wrapper">
+                <i class="fa-solid fa-location-dot"></i> <span id="profile-location">Location</span>
+              </div>
+              <div class="meta-item" id="meta-company-wrapper">
+                <i class="fa-solid fa-building"></i> <span id="profile-company">Company</span>
+              </div>
+              <div class="meta-item" id="meta-blog-wrapper">
+                <i class="fa-solid fa-link"></i> <a id="profile-blog" href="#" target="_blank">Website</a>
+              </div>
+              <div class="meta-item">
+                <i class="fa-solid fa-calendar-days"></i> <span id="profile-age">Account Age</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistics Grid -->
+          <div class="stats-overview-grid">
+            <div class="glass-card stat-card glow-blue">
+              <div class="stat-icon"><i class="fa-solid fa-code-branch"></i></div>
+              <div class="stat-value" id="stat-repos">0</div>
+              <div class="stat-label">Public Repos</div>
+            </div>
+            <div class="glass-card stat-card glow-purple">
+              <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+              <div class="stat-value" id="stat-followers">0</div>
+              <div class="stat-label">Followers</div>
+            </div>
+            <div class="glass-card stat-card glow-pink">
+              <div class="stat-icon"><i class="fa-solid fa-user-plus"></i></div>
+              <div class="stat-value" id="stat-following">0</div>
+              <div class="stat-label">Following</div>
+            </div>
+            <div class="glass-card stat-card glow-yellow">
+              <div class="stat-icon"><i class="fa-solid fa-star"></i></div>
+              <div class="stat-value" id="stat-stars">0</div>
+              <div class="stat-label">Total Stars</div>
+            </div>
+            <div class="glass-card stat-card glow-cyan">
+              <div class="stat-icon"><i class="fa-solid fa-code-fork"></i></div>
+              <div class="stat-value" id="stat-forks">0</div>
+              <div class="stat-label">Total Forks</div>
+            </div>
+            <!-- Score Card -->
+            <div class="glass-card score-card">
+              <div class="score-circle">
+                <div class="score-ring"></div>
+                <div class="score-number" id="activity-score">0</div>
+              </div>
+              <div class="score-label">Activity Score</div>
+            </div>
+          </div>
+
+          <!-- Insights Section: Languages & Code Distribution -->
+          <div class="insights-grid">
+            <div class="glass-card languages-card">
+              <h3><i class="fa-solid fa-code"></i> Language Breakdown</h3>
+              <div id="languages-list" class="languages-list">
+                <!-- Dynamically populated progress bars -->
+              </div>
+            </div>
+            <div class="glass-card activity-details-card">
+              <h3><i class="fa-solid fa-chart-line"></i> Analysis Insights</h3>
+              <div class="insights-list">
+                <div class="insight-row">
+                  <span class="insight-label">Primary Tech Stack</span>
+                  <span class="insight-val text-gradient" id="insight-top-lang">-</span>
+                </div>
+                <div class="insight-row">
+                  <span class="insight-label">Average Stars / Repo</span>
+                  <span class="insight-val" id="insight-avg-stars">0</span>
+                </div>
+                <div class="insight-row">
+                  <span class="insight-label">Average Forks / Repo</span>
+                  <span class="insight-val" id="insight-avg-forks">0</span>
+                </div>
+                <div class="insight-row">
+                  <span class="insight-label">Follower/Following Ratio</span>
+                  <span class="insight-val" id="insight-ratio">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Repositories Grid -->
+          <div class="repos-section">
+            <h3 class="section-title"><i class="fa-solid fa-award"></i> Top 5 Repositories (by Stars)</h3>
+            <div id="repos-grid" class="repos-grid">
+              <!-- Dynamically populated repository cards -->
+            </div>
+          </div>
+
+          <!-- Actions Footer -->
+          <footer class="detail-actions">
+            <button class="btn btn-danger" id="delete-profile-btn">
+              <i class="fa-solid fa-trash-can"></i> Delete Profile Analysis
+            </button>
+            <a id="github-profile-link" class="btn btn-secondary" href="#" target="_blank">
+              View on GitHub <i class="fa-solid fa-external-link"></i>
+            </a>
+          </footer>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

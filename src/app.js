@@ -44,8 +44,11 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Static files frontend
+app.use(express.static("public"));
+
 // API docs summary
-app.get("/", (req, res) => {
+app.get("/api-info", (req, res) => {
   res.json({
     success: true,
     name: "GitHub Profile Analyzer API",
