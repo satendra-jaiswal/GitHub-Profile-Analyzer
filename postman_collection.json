@@ -1,0 +1,346 @@
+{
+  "info": {
+    "name": "GitHub Profile Analyzer API",
+    "description": "A backend service that analyzes GitHub user profiles and stores insights in MySQL.\n\n## Setup\n1. Set the `baseUrl` variable to your deployed URL (or `http://localhost:3000` for local)\n2. Set the `username` variable to any GitHub username you want to test\n3. Run requests in order: Analyze → List → Get Single → Delete\n\n## Live Base URL\nUpdate `baseUrl` variable after deployment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "github-profile-analyzer-v1"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Change this to your deployed URL after deployment"
+    },
+    {
+      "key": "username",
+      "value": "torvalds",
+      "type": "string",
+      "description": "GitHub username to analyze"
+    }
+  ],
+  "item": [
+    {
+      "name": "🟢 Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verify the API server is running and healthy."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"GitHub Profile Analyzer API is running\",\n  \"timestamp\": \"2024-01-15T10:30:00.000Z\",\n  \"version\": \"1.0.0\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "API Info / Endpoint Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Returns a summary of all available API endpoints."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"name\": \"GitHub Profile Analyzer API\",\n  \"version\": \"1.0.0\",\n  \"endpoints\": {\n    \"health\": \"GET /health\",\n    \"analyzeProfile\": \"POST /api/profiles/analyze/:username\",\n    \"listProfiles\": \"GET /api/profiles?page=1&limit=20&sort=analyzed_at&order=DESC\",\n    \"getProfile\": \"GET /api/profiles/:username\",\n    \"deleteProfile\": \"DELETE /api/profiles/:username\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👤 Profiles",
+      "item": [
+        {
+          "name": "Analyze & Store Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);",
+                  "pm.test('data has username', () => pm.expect(pm.response.json().data).to.have.property('username'));",
+                  "pm.test('data has activity_score', () => pm.expect(pm.response.json().data).to.have.property('activity_score'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/analyze/{{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "analyze", "{{username}}"]
+            },
+            "description": "**Primary endpoint.** Fetches the GitHub user's profile + all public repos, computes insights, and stores/updates everything in MySQL.\n\nRunning this multiple times on the same username will:\n- Update the profile fields\n- Append a new stats snapshot (for trend tracking)\n- Replace language breakdown and top repos\n\n**Try different usernames:** `torvalds`, `gaearon`, `sindresorhus`, `tj`, `addyosmani`"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile analyzed and stored successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"username\": \"torvalds\",\n    \"github_id\": 1024025,\n    \"name\": \"Linus Torvalds\",\n    \"bio\": null,\n    \"avatar_url\": \"https://avatars.githubusercontent.com/u/1024025\",\n    \"html_url\": \"https://github.com/torvalds\",\n    \"location\": \"Portland, OR\",\n    \"company\": \"Linux Foundation\",\n    \"account_type\": \"User\",\n    \"activity_score\": 89.5,\n    \"most_used_language\": \"C\",\n    \"account_age_days\": 5200,\n    \"analyzed_at\": \"2024-01-15T10:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"GitHub user \\\"nonexistentxyz\\\" not found\"\n}"
+            },
+            {
+              "name": "429 Rate Limited",
+              "status": "Too Many Requests",
+              "code": 429,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"GitHub API rate limit exceeded. Set GITHUB_TOKEN in .env to increase limits.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List All Profiles (default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('data is array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                  "pm.test('pagination exists', () => pm.expect(pm.response.json().pagination).to.have.property('total'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "20", "description": "Results per page, max 100 (default: 20)" }
+              ]
+            },
+            "description": "Returns paginated list of all analyzed profiles with their latest stats."
+          }
+        },
+        {
+          "name": "List All Profiles (sorted by stars)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles?page=1&limit=10&sort=total_stars&order=DESC",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                {
+                  "key": "sort",
+                  "value": "total_stars",
+                  "description": "Options: analyzed_at | username | followers | total_stars | activity_score"
+                },
+                { "key": "order", "value": "DESC", "description": "ASC or DESC" }
+              ]
+            },
+            "description": "Sort by total stars descending — useful to see most popular developers first."
+          }
+        },
+        {
+          "name": "List All Profiles (sorted by activity score)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles?sort=activity_score&order=DESC&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "sort", "value": "activity_score" },
+                { "key": "order", "value": "DESC" },
+                { "key": "limit", "value": "5" }
+              ]
+            },
+            "description": "Get top 5 profiles ranked by composite activity score."
+          }
+        },
+        {
+          "name": "Get Single Profile (full detail)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has latestStats', () => pm.expect(pm.response.json().data).to.have.property('latestStats'));",
+                  "pm.test('has languages array', () => pm.expect(pm.response.json().data.languages).to.be.an('array'));",
+                  "pm.test('has topRepos array', () => pm.expect(pm.response.json().data.topRepos).to.be.an('array'));",
+                  "pm.test('has statsHistory', () => pm.expect(pm.response.json().data.statsHistory).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/{{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "{{username}}"]
+            },
+            "description": "Returns complete profile data including:\n- Core profile info\n- Latest stats snapshot\n- Language breakdown (all languages, sorted by repo count)\n- Top 5 repositories by stars\n- Last 10 stats snapshots for trend tracking\n- Computed insights: activity score, account age, avg stars/forks per repo, follower/following ratio"
+          },
+          "response": [
+            {
+              "name": "200 OK – Full Detail",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile retrieved successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"username\": \"torvalds\",\n    \"name\": \"Linus Torvalds\",\n    \"location\": \"Portland, OR\",\n    \"activity_score\": 89.5,\n    \"account_age_days\": 5200,\n    \"avg_stars_per_repo\": 25600.0,\n    \"avg_forks_per_repo\": 4200.0,\n    \"follower_following_ratio\": 230000,\n    \"most_used_language\": \"C\",\n    \"latestStats\": {\n      \"public_repos\": 7,\n      \"followers\": 230000,\n      \"following\": 0,\n      \"total_stars\": 179200,\n      \"total_forks\": 29400\n    },\n    \"languages\": [\n      { \"language\": \"C\", \"repo_count\": 4 },\n      { \"language\": \"Shell\", \"repo_count\": 1 }\n    ],\n    \"topRepos\": [\n      {\n        \"repo_name\": \"linux\",\n        \"full_name\": \"torvalds/linux\",\n        \"description\": \"Linux kernel source tree\",\n        \"stars\": 179000,\n        \"forks\": 29000,\n        \"language\": \"C\"\n      }\n    ],\n    \"statsHistory\": [\n      { \"followers\": 230000, \"total_stars\": 179200, \"recorded_at\": \"2024-01-15T10:30:00.000Z\" }\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Analyzed",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Profile \\\"torvalds\\\" not found. Analyze it first via POST /api/profiles/analyze/torvalds\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('success is true', () => pm.expect(pm.response.json().success).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/{{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "{{username}}"]
+            },
+            "description": "Deletes the profile and **all related data** (stats history, language breakdown, top repos, activity insights) via CASCADE.\n\n⚠️ This is irreversible. Re-analyze the user to restore their data."
+          },
+          "response": [
+            {
+              "name": "200 Deleted",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile \\\"torvalds\\\" deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "⚠️ Edge Cases",
+      "item": [
+        {
+          "name": "Invalid Username (special chars)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/analyze/invalid--username!!",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "analyze", "invalid--username!!"]
+            },
+            "description": "Should return 400 validation error — GitHub usernames cannot contain special characters."
+          }
+        },
+        {
+          "name": "Non-existent GitHub User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/analyze/thisisaverylongusernamethatdoesnotexist999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "analyze", "thisisaverylongusernamethatdoesnotexist999"]
+            },
+            "description": "Should return 404 from GitHub API."
+          }
+        },
+        {
+          "name": "Get Profile Not Yet Analyzed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profiles/notanalyzedyet",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "profiles", "notanalyzedyet"]
+            },
+            "description": "Should return 404 with helpful message to use the analyze endpoint first."
+          }
+        },
+        {
+          "name": "Route Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/nonexistent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "nonexistent"]
+            },
+            "description": "Should return 404 route not found."
+          }
+        }
+      ]
+    }
+  ]
+}
