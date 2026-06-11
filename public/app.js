@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const usernameInput = document.getElementById("username-input");
   const searchBtn = document.getElementById("search-btn");
   const apiStatusMsg = document.getElementById("api-status-msg");
-  const sortSelect = document.getElementById("sort-select");
-  const historyList = document.getElementById("history-list");
   
   const welcomeView = document.getElementById("welcome-view");
   const loadingView = document.getElementById("loading-view");
@@ -40,16 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const reposGrid = document.getElementById("repos-grid");
   
   // Footer actions
-  const deleteProfileBtn = document.getElementById("delete-profile-btn");
   const githubProfileLink = document.getElementById("github-profile-link");
 
   let currentActiveUser = null;
-
-  // Initialize page
-  fetchHistory();
-
-  // Sort change listener
-  sortSelect.addEventListener("change", fetchHistory);
 
   // Suggestions listener
   document.querySelectorAll(".suggestion-tag").forEach(tag => {
@@ -68,38 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Delete profile handler
-  deleteProfileBtn.addEventListener("click", async () => {
-    if (!currentActiveUser) return;
-    
-    const confirmDelete = confirm(`Are you sure you want to delete the analysis for @${currentActiveUser}? This will remove all their historical data.`);
-    if (!confirmDelete) return;
-
-    try {
-      deleteProfileBtn.disabled = true;
-      deleteProfileBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
-      
-      const response = await fetch(`/api/profiles/${currentActiveUser}`, {
-        method: "DELETE"
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        showWelcomeView();
-        fetchHistory();
-        usernameInput.value = "";
-      } else {
-        alert(result.message || "Failed to delete profile");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error contacting the API.");
-    } finally {
-      deleteProfileBtn.disabled = false;
-      deleteProfileBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Delete Profile Analysis';
-    }
-  });
-
   // Trigger search pipeline
   async function triggerSearch(username) {
     hideStatusMessage();
@@ -112,9 +71,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
 
       if (result.success) {
-        // Fetch detailed profile mapping (since POST returns simplified profile structure)
-        await loadDetailedProfile(result.data.username);
-        fetchHistory();
+        // Direct render from search result payload (contains full analytics)
+        renderProfile(result.data);
       } else {
         showStatusMessage(result.message, "error");
         showWelcomeView();
@@ -124,81 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
       showStatusMessage("Failed to reach server. Please try again.", "error");
       showWelcomeView();
     }
-  }
-
-  // Load detailed profile
-  async function loadDetailedProfile(username) {
-    try {
-      const response = await fetch(`/api/profiles/${username}`);
-      const result = await response.json();
-
-      if (result.success) {
-        renderProfile(result.data);
-      } else {
-        showStatusMessage(result.message, "error");
-        showWelcomeView();
-      }
-    } catch (err) {
-      console.error(err);
-      showStatusMessage("Error loading profile details.", "error");
-      showWelcomeView();
-    }
-  }
-
-  // Fetch analyzed profile history list
-  async function fetchHistory() {
-    const sortField = sortSelect.value;
-    try {
-      const response = await fetch(`/api/profiles?sort=${sortField}&order=DESC&limit=30`);
-      const result = await response.json();
-
-      if (result.success) {
-        renderHistoryList(result.data);
-      } else {
-        historyList.innerHTML = `<div class="info-alert error"><i class="fa-solid fa-triangle-exclamation"></i> Error loading history</div>`;
-      }
-    } catch (err) {
-      console.error(err);
-      historyList.innerHTML = `<div class="info-alert error"><i class="fa-solid fa-triangle-exclamation"></i> Connection issue</div>`;
-    }
-  }
-
-  // Render History Sidebar List
-  function renderHistoryList(profiles) {
-    if (!profiles || profiles.length === 0) {
-      historyList.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem 0; font-size: 0.85rem;"><i class="fa-solid fa-box-open" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i> No profiles analyzed yet</div>`;
-      return;
-    }
-
-    historyList.innerHTML = "";
-    profiles.forEach(p => {
-      const activeClass = (currentActiveUser && currentActiveUser.toLowerCase() === p.username.toLowerCase()) ? "active" : "";
-      
-      const item = document.createElement("div");
-      item.className = `history-item ${activeClass}`;
-      item.innerHTML = `
-        <img src="${p.avatar_url}" alt="${p.username}">
-        <div class="history-info">
-          <div class="history-name">${p.name || p.username}</div>
-          <div class="history-meta">
-            <span><i class="fa-solid fa-star"></i> ${formatNumber(p.total_stars)}</span>
-            <span><i class="fa-solid fa-users"></i> ${formatNumber(p.followers)}</span>
-          </div>
-        </div>
-        <div class="history-score-badge">${parseFloat(p.activity_score).toFixed(0)}</div>
-      `;
-
-      item.addEventListener("click", () => {
-        // Highlight active
-        document.querySelectorAll(".history-item").forEach(el => el.classList.remove("active"));
-        item.classList.add("active");
-        
-        showLoadingView();
-        loadDetailedProfile(p.username);
-      });
-
-      historyList.appendChild(item);
-    });
   }
 
   // Render Full Profile Dashboard Insights
@@ -379,9 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadingView.classList.add("hidden");
     analysisView.classList.add("hidden");
     currentActiveUser = null;
-    
-    // Remove active state from history list items
-    document.querySelectorAll(".history-item").forEach(el => el.classList.remove("active"));
   }
 
   function showLoadingView() {

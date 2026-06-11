@@ -8,8 +8,23 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "src/app.js"
+    },
+    {
+      "src": "/health",
+      "dest": "src/app.js"
+    },
+    {
+      "src": "/api-info",
+      "dest": "src/app.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "public/$1"
     }
   ]
 }
