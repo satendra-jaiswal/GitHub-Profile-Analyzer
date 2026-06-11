@@ -1,13 +1,16 @@
 const axios = require("axios");
 require("dotenv").config();
 
+const token = process.env.GITHUB_TOKEN ? process.env.GITHUB_TOKEN.trim() : "";
+const isValidToken = token.startsWith("ghp_") || token.startsWith("github_pat_");
+
 const githubApi = axios.create({
   baseURL: "https://api.github.com",
   headers: {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
-    ...(process.env.GITHUB_TOKEN && {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+    ...(isValidToken && {
+      Authorization: `Bearer ${token}`,
     }),
   },
   timeout: 10000,
@@ -41,14 +44,23 @@ const fetchUserProfile = async (username) => {
 };
 
 /**
- * Fetch public repositories for a user (up to 100 to optimize API rate limit usage)
+ * Fetch all public repositories for a user (auto-paginate up to 500)
  */
 const fetchUserRepos = async (username) => {
+  const repos = [];
+  let page = 1;
+  const perPage = 100;
+
   try {
-    const { data } = await githubApi.get(`/users/${username}/repos`, {
-      params: { per_page: 100, page: 1, sort: "pushed", type: "owner" },
-    });
-    return data;
+    while (repos.length < 500) {
+      const { data } = await githubApi.get(`/users/${username}/repos`, {
+        params: { per_page: perPage, page, sort: "pushed", type: "owner" },
+      });
+      repos.push(...data);
+      if (data.length < perPage) break;
+      page++;
+    }
+    return repos;
   } catch (err) {
     if (err.response?.status === 401) {
       const e = new Error("GitHub API token is invalid or expired. Please check your GITHUB_TOKEN in .env.");
