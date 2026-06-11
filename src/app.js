@@ -3,7 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ override: true });
 
 const profileRoutes = require("./routes/profileRoutes");
 const { notFound, globalError } = require("./middleware/errorHandler");
@@ -45,7 +46,7 @@ app.get("/health", (req, res) => {
 });
 
 // Static files frontend
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // API docs summary
 app.get("/api-info", (req, res) => {
