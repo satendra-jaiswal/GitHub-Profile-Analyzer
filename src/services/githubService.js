@@ -2,6 +2,7 @@ const axios = require("axios");
 require("dotenv").config();
 
 const token = process.env.GITHUB_TOKEN ? process.env.GITHUB_TOKEN.trim() : "";
+console.log(`🔑 Loaded GitHub Token: ${token ? `Length: ${token.length}, Prefix: ${token.substring(0, 5)}...` : "None"}`);
 const isValidToken = token.startsWith("ghp_") || token.startsWith("github_pat_");
 
 const githubApi = axios.create({
